@@ -3,8 +3,9 @@ const socket = io();
 
 const createGameButton = document.getElementById("createGameButton");
 
+//Ask the server to create a game when the button is clicked
 createGameButton.addEventListener("click", function () {
-    alert("You clicked Create Game")
+    socket.emit("createGame")
 });
 
 const joinGameButton = document.getElementById("joinGameButton");
@@ -27,4 +28,10 @@ joinGameButton.addEventListener("click", function() {
             landingMessage.textContent = "Joining...";
         }, 1100)
     }
+});
+
+//Display the room code when the server confirms creation
+socket.on("roomCreated", function (roomCode) {
+    landingMessage.textContent = 
+    "Room code: " + roomCode + " - Waiting for another player...";
 });
