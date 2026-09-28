@@ -1,4 +1,7 @@
-//Load the tools our backend needs
+// =============================================================
+// SERVER SETUP - load tools, prepare room storage, and serve frontend files
+// =============================================================
+
 const express = require("express");
 const app = express(); // Create ROOT's Express application
 
@@ -13,7 +16,8 @@ const { Server } = require("socket.io");
 const server = http.createServer(app);
 const io = new Server(server);
 
-//Store active game rooms on the server
+
+//store active game rooms on the server
 const rooms = new Map();
 
 // Generate a six-letter room code
@@ -34,7 +38,12 @@ function generateRoomCode() {
 // Keeping this limited to public avoids sharing the whole project.
 app.use(express.static(path.join(__dirname, "public")));
 
-//Notice when a browser connects through Socket.IO
+
+
+// ===================================================================
+// BROWSER CONNECTION - handles requests to create and join game rooms
+// ===================================================================
+
 io.on("connection", function (socket) {
     console.log("A browser connected:", socket.id);
 
@@ -66,7 +75,42 @@ io.on("connection", function (socket) {
 
         console.log("Available room code:", roomCode);
     });
+
+    //Recieve the room code from the browser that clicked "Join Game"
+    socket.on("joinGame", function(roomCode) {
+        console.log("Join requested for room:", roomCode);
+        // Reject codes that do no match an existing room
+        if (!rooms.has(roomCode)) {
+            socket.emit("joinError", "Invalid Code");
+            return;
+        }
+
+        //Get the existing room's information
+        const room = rooms.get(roomCode);
+
+        //Reject the request if two player limit reached - SERVER FULL
+        if (room.players.length >= 2) {
+            socket.emit("joinError", "Room is full.");
+            return;
+        }
+
+        // Record the joining browser as a player in this game
+        room.players.push(socket);
+
+        // Add that browser to the room's live messaging group
+        socket.join(roomCode);
+
+        //Remember which game this connection belongs to
+        socket.data.roomCode = roomCode;
+        
+        // Tell both browsers in this room that two players have joined
+        io.to(roomCode).emit("roomReady");
+    });
 });
+
+// ==========================================================
+// START SERVER - listen for browser connections on port 3000
+// ==========================================================
 
 // starts listening for browser connections on port 3000
 server.listen(3000, function () {
