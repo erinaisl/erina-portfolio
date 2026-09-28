@@ -1,3 +1,6 @@
+//Connect this browser to ROOT's server
+const socket = io();
+
 const createGameButton = document.getElementById("createGameButton");
 
 createGameButton.addEventListener("click", function () {
