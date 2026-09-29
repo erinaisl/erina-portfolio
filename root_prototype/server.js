@@ -113,8 +113,19 @@ io.on("connection", function (socket) {
         //Remember which game this connection belongs to
         socket.data.roomCode = roomCode;
         
+        //Randomly choose which player is the Detective
+        const detectiveIndex = Math.floor(Math.random() * 2);
+
+        // store both role assignments on the server
+        room.detectiveId = room.players[detectiveIndex];
+        room.mastermindId = room.players[1 - detectiveIndex];
+
         // Tell both browsers in this room that two players have joined
         io.to(roomCode).emit("roomReady");
+
+        //Send each role only to its assigned connection
+        io.to(room.detectiveId).emit("roleAssigned", "Detective");
+        io.to(room.mastermindId).emit("roleAssigned", "Mastermind");
     });
 
     //Detect when a browser connection ends

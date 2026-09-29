@@ -100,3 +100,8 @@ socket.on("playerLeft", function (roomCode) {
         "Room code: " + roomCode + "- Waiting for another player"
     );
 });
+
+//Recieve the role assigned to this brwser
+socket.on("roleAssigned", function (role) {
+    console.log("Your role:", role);
+});
