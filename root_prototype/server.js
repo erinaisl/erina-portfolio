@@ -49,6 +49,11 @@ io.on("connection", function (socket) {
 
     // Listen for this browser's request to create a game
     socket.on("createGame", function () {
+        //Prevent this connection from creating another room
+        if (socket.data.roomCode) {
+            socket.emit("createError", "You are already in a room.");
+            return;
+        }
         console.log("Create Game requested by:", socket.id);
 
         //Generate a code and retry if an active room already uses it
@@ -78,6 +83,11 @@ io.on("connection", function (socket) {
 
     //Recieve the room code from the browser that clicked "Join Game"
     socket.on("joinGame", function(roomCode) {
+        // Prevent a connection that already has a room from joining again
+        if (socket.data.roomCode) {
+            socket.emit("joinError", "Your are already in a room.");
+            return;
+        }
         console.log("Join requested for room:", roomCode);
         // Reject codes that do no match an existing room
         if (!rooms.has(roomCode)) {
@@ -95,7 +105,7 @@ io.on("connection", function (socket) {
         }
 
         // Record the joining browser as a player in this game
-        room.players.push(socket);
+        room.players.push(socket.id);
 
         // Add that browser to the room's live messaging group
         socket.join(roomCode);
@@ -105,6 +115,39 @@ io.on("connection", function (socket) {
         
         // Tell both browsers in this room that two players have joined
         io.to(roomCode).emit("roomReady");
+    });
+
+    //Detect when a browser connection ends
+    socket.on("disconnect", function () {
+        console.log("A browser disconnected:", socket.id);
+        const roomCode = socket.data.roomCode
+
+        // A browser may disconnect without ever joining a room
+        if (!roomCode) {
+            return;
+
+        }
+
+        const room = rooms.get(roomCode);
+        
+        // Stop if that room has already been removed
+        if (!room) {
+            return;
+        }
+
+        //Keep only the connections that have not disconnected
+        room.players = room.players.filter(function (playerId) {
+            return playerId !== socket.id;
+        });
+
+
+        //Delete the room if nobody remains
+        if (room.players.length === 0) {
+            rooms.delete(roomCode);
+        } else {
+            //Notify the connection still in this room
+            io.to(roomCode).emit("playerLeft", roomCode);
+        }
     });
 });
 

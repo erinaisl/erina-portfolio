@@ -14,6 +14,7 @@ const landingMessage = document.getElementById("landingMessage");
 
 //Remember the repeating timer so we can stop it later
 let joiningInterval = null;
+let gameTransitionTimeout = null;
 
 //Animate dots after any loading message
     function startLoadingMessage(message) {
@@ -68,6 +69,13 @@ socket.on("joinError", function (message) {
     joinGameButton.disabled = false;
 });
 
+//Display a rejected room-creation request
+socket.on("createError", function (message) {
+    clearInterval(joiningInterval);
+    joiningInterval = null;
+    landingMessage.textContent = message;
+});
+
 //Update the landing screen when both players have joined
 socket.on("roomReady", function () {
     clearInterval(joiningInterval);
@@ -78,7 +86,17 @@ socket.on("roomReady", function () {
     createGameButton.disabled = true; //disables createGame button
 
     //Wait 1.1 seconds, then start the animated loading message
-    setTimeout(function () {
+    gameTransitionTimeout = setTimeout(function () {
         startLoadingMessage("Joining game");
-    }, 1100)
+    }, 1400)
+});
+
+//Return to waiting when the other connection leaves
+socket.on("playerLeft", function (roomCode) {
+    clearTimeout(gameTransitionTimeout);
+    gameTransitionTimeout = null;
+
+    startLoadingMessage(
+        "Room code: " + roomCode + "- Waiting for another player"
+    );
 });
